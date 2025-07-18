@@ -53,6 +53,9 @@ fn apply_velocity(
     time: Res<Time>,
 ) {
     for (velocity, mut transform) in vel_query.iter_mut() {
+        if velocity.length() == 0. {
+            continue;
+        }
         transform.translation.x += velocity.x * time.delta_secs();
         transform.translation.y += velocity.y * time.delta_secs();
     }
