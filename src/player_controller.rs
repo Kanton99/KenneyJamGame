@@ -1,3 +1,4 @@
+use crate::physics;
 use bevy::{
     app::{App, FixedUpdate, Plugin, Startup, Update},
     color::Color,
@@ -69,5 +70,6 @@ fn spawn_player(mut command: Commands) {
         Velocity(Vec2::ZERO),
         Sprite::from_color(Color::srgb(1., 0., 0.), Vec2::ONE),
         Transform::from_translation(Vec3::ZERO).with_scale(Vec2::splat(40.).extend(1.)),
+        physics::RigidBody,
     ));
 }

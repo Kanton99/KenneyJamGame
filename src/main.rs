@@ -5,12 +5,15 @@ use bevy::{
     ecs::system::Commands,
 };
 
+use crate::physics::Physics;
 use crate::player_controller::PlayerController;
 
+mod physics;
 mod player_controller;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(Physics)
         .add_plugins(PlayerController)
         .add_systems(Startup, setup)
         .run();
