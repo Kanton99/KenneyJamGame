@@ -1,6 +1,10 @@
 [package]
-name = "KenneyJamGame"
+name = "the_quest_for_more_power"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bevy = { version = "0.16.1", features = ["dynamic_linking", "wayland"] }
+
+[target.wasm32-unknown-unknown]
+runner = "wasm-server-runner"
