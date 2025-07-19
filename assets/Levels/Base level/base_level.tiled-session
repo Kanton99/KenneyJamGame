@@ -1,0 +1,49 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/tileset-tiles.tsx": {
+            "scaleInDock": 1.5,
+            "scaleInEditor": 3
+        },
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_tiny_town/Tiled/First Level.tmx": {
+            "scale": 1.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 238,
+                "y": 128.66666666666663
+            }
+        },
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_tiny_town/Tiled/tiny_town.tsx": {
+            "scaleInDock": 1.5,
+            "scaleInEditor": 3
+        },
+        "Base.tmx": {
+            "scale": 1.5,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": -12,
+                "y": 42.666666666666686
+            }
+        }
+    },
+    "map.fixedSize": true,
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 18,
+    "map.tileWidth": 18,
+    "openFiles": [
+    ],
+    "project": "base_level.tiled-project",
+    "recentFiles": [
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/tileset-tiles.tsx",
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_tiny_town/Tiled/First Level.tmx",
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_tiny_town/Tiled/tiny_town.tsx",
+        "Base.tmx"
+    ]
+}
