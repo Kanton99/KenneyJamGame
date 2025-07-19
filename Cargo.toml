@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+avian2d = "0.3.1"
 bevy = { version = "0.16.1", features = ["dynamic_linking", "wayland"] }
 bevy_ecs_tiled = "0.7.3"
 bevy_ecs_tilemap = "0.16.0"

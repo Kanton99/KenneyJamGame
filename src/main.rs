@@ -1,3 +1,5 @@
+use crate::player_controller::*;
+use avian2d::prelude::*;
 use bevy::{
     DefaultPlugins,
     app::{App, Startup},
@@ -6,23 +8,18 @@ use bevy::{
     math::bounding::Aabb2d,
     prelude::*,
 };
+use bevy_ecs_tiled::prelude::*;
 
-use crate::physics::*;
-use crate::player_controller::*;
-use crate::shared::PhysicsSet;
-
-mod physics;
 mod player_controller;
-mod shared;
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins((
+            DefaultPlugins.set(ImagePlugin::default_nearest()),
+            PhysicsPlugins::default(),
+        ))
+        .insert_resource(Gravity(Vec2::NEG_Y * 320.0))
+        .add_plugins(TiledMapPlugin::default())
         .add_systems(Startup, setup)
-        .configure_sets(
-            FixedUpdate,
-            (PhysicsSet::Input, PhysicsSet::Physics).chain(),
-        )
-        .add_plugins(Physics)
         .add_plugins(PlayerController)
         .add_systems(Update, camera_follow)
         .run();
@@ -43,12 +40,12 @@ impl Default for ElasticCamera {
     }
 }
 
-fn setup(mut command: Commands) {
+fn setup(mut command: Commands, asset_server: Res<AssetServer>) {
     command.spawn((
         Camera2d,
         Transform::from_xyz(0., 0., 0.),
         Projection::Orthographic(OrthographicProjection {
-            scale: 1. / (18. * 4.),
+            scale: 2. / (4.5),
             ..OrthographicProjection::default_2d()
         }),
         ElasticCamera::default(),
@@ -56,9 +53,14 @@ fn setup(mut command: Commands) {
 
     command.spawn((
         Sprite::from_color(Color::srgb(1., 1., 1.), Vec2::ONE),
-        Transform::from_translation(Vec3::new(0., -5., 1.)).with_scale(Vec3::new(20., 1., 1.)),
-        Collider(Aabb2d::new(Vec2::new(0., -5.), Vec2::new(10., 0.5))),
-        Static,
+        Transform::from_translation(Vec3::new(0., -5., 1.)).with_scale(Vec3::new(200., 1., 1.)),
+        RigidBody::Static,
+        Collider::rectangle(40., 2.),
+    ));
+
+    command.spawn((
+        TiledMapHandle(asset_server.load("kenney_pixel_platformer/Tiled/First Level.tmx")),
+        TilemapAnchor::Center,
     ));
 }
 
