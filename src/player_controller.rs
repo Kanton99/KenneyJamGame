@@ -2,7 +2,6 @@ use crate::physics::*;
 use crate::shared::PhysicsSet;
 use bevy::{
     app::{App, Plugin, Startup},
-    color::Color,
     ecs::{
         component::Component,
         system::{Commands, Res, Single},
@@ -31,7 +30,7 @@ const PLAYER_JUMP: f32 = 3.;
 
 #[derive(Component)]
 #[require(Sprite, Transform)]
-struct Player {
+pub struct Player {
     can_jump: bool,
 }
 
@@ -70,12 +69,19 @@ fn set_can_jump(
     }
 }
 
-fn spawn_player(mut command: Commands) {
+fn spawn_player(
+    mut command: Commands,
+    asset_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     command.spawn((
         Player { can_jump: false },
         Collider(Aabb2d::new(Vec2::ZERO, Vec2::splat(0.5))),
-        Sprite::from_color(Color::srgb(1., 0., 0.), Vec2::ONE),
-        Transform::from_translation(Vec3::ZERO).with_scale(Vec2::splat(1.).extend(1.)),
+        Sprite::from_image(asset_server.load("kenney_tiny_dungeon/Tiles/player.png")),
+        Mesh2d(meshes.add(Rectangle::new(1., 1.))),
+        MeshMaterial2d(materials.add(asset_server.load("kenney_tiny_dungeon/Tiles/player.png"))),
+        Transform::from_translation(Vec3::ZERO).with_scale(Vec2::splat(1. / 18.).extend(1.)),
         RigidBody,
     ));
 }
