@@ -9,13 +9,19 @@ use bevy::{
 
 use crate::physics::*;
 use crate::player_controller::PlayerController;
+use crate::shared::PhysicsSet;
 
 mod physics;
 mod player_controller;
+mod shared;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
+        .configure_sets(
+            FixedUpdate,
+            (PhysicsSet::Input, PhysicsSet::Physics).chain(),
+        )
         .add_plugins(Physics)
         .add_plugins(PlayerController)
         .run();

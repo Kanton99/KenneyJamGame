@@ -1,3 +1,4 @@
+use crate::shared::PhysicsSet;
 use bevy::{
     app::{App, FixedUpdate, Plugin},
     ecs::{
@@ -22,7 +23,12 @@ impl Plugin for Physics {
     fn build(&self, app: &mut App) {
         app.add_systems(
             FixedUpdate,
-            (gravity, apply_velocity, check_collisions).chain(),
+            (
+                gravity,
+                check_collisions,
+                apply_velocity.in_set(PhysicsSet::Physics),
+            )
+                .chain(),
         );
     }
 }
@@ -48,7 +54,7 @@ impl Default for Collider {
 #[derive(Component)]
 pub struct Static;
 
-fn apply_velocity(
+pub fn apply_velocity(
     mut vel_query: Query<(&Velocity, &mut Transform), With<RigidBody>>,
     time: Res<Time>,
 ) {
