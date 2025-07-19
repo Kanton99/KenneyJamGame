@@ -30,6 +30,7 @@ impl Plugin for Physics {
             )
                 .chain(),
         );
+        app.add_event::<CollisionEvent>();
     }
 }
 
@@ -54,6 +55,12 @@ impl Default for Collider {
 #[derive(Component)]
 pub struct Static;
 
+#[derive(Event)]
+pub struct CollisionEvent {
+    pub this: Entity,
+    pub other: Entity,
+}
+
 pub fn apply_velocity(
     mut vel_query: Query<(&Velocity, &mut Transform), With<RigidBody>>,
     time: Res<Time>,
@@ -75,11 +82,17 @@ fn gravity(mut rigidbodies_query: Query<&mut Velocity, With<RigidBody>>, time: R
 }
 
 fn check_collisions(
-    mut dyn_colliders_query: Query<(&Collider, &mut Transform, &mut Velocity), Without<Static>>,
-    static_colliders_query: Query<(&Collider, &Transform), With<Static>>,
+    mut dyn_colliders_query: Query<
+        (Entity, &Collider, &mut Transform, &mut Velocity),
+        Without<Static>,
+    >,
+    static_colliders_query: Query<(Entity, &Collider, &Transform), With<Static>>,
+    mut collision_event: EventWriter<CollisionEvent>,
 ) {
-    for (dyn_collider, mut dyn_transform, mut velocity) in dyn_colliders_query.iter_mut() {
-        for (static_collider, static_transform) in static_colliders_query.iter() {
+    for (dyn_entity, dyn_collider, mut dyn_transform, mut velocity) in
+        dyn_colliders_query.iter_mut()
+    {
+        for (static_entity, static_collider, static_transform) in static_colliders_query.iter() {
             if let Some(corrections) = check_collision(
                 &dyn_transform,
                 dyn_collider,
@@ -96,6 +109,12 @@ fn check_collisions(
                 if corrections.y != 0. {
                     velocity.y = 0.;
                 }
+
+                let coll_event: CollisionEvent = CollisionEvent {
+                    this: dyn_entity,
+                    other: static_entity,
+                };
+                collision_event.write(coll_event);
             }
         }
     }
