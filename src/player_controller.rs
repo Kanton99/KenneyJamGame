@@ -35,20 +35,25 @@ struct Velocity(Vec2);
 fn player_controller(
     input: Res<ButtonInput<KeyCode>>,
     player_query: Single<&mut Velocity, With<Player>>,
+    time: Res<Time>,
 ) {
     let mut player_velocity = player_query.into_inner();
-    player_velocity.x = 0.;
-    player_velocity.y = 0.;
+    let mut direction = Vec2::ZERO;
+    // player_velocity.x = 0.;
+    // player_velocity.y = 0.;
     if input.pressed(KeyCode::KeyW) {
-        player_velocity.y += 1.;
+        direction.y += 1. * PLAYER_SPEED * time.delta_secs();
     }
 
     if input.pressed(KeyCode::KeyA) {
-        player_velocity.x -= 1.;
+        direction.x -= 1. * PLAYER_SPEED * time.delta_secs();
     }
     if input.pressed(KeyCode::KeyD) {
-        player_velocity.x += 1.;
+        direction.x += 1. * PLAYER_SPEED * time.delta_secs();
     }
+
+    player_velocity.x += direction.x;
+    player_velocity.y += direction.y;
 }
 
 fn spawn_player(mut command: Commands) {
@@ -58,5 +63,6 @@ fn spawn_player(mut command: Commands) {
         Sprite::from_color(Color::srgb(1., 0., 0.), Vec2::ONE),
         Transform::from_translation(Vec3::ZERO).with_scale(Vec2::splat(40.).extend(1.)),
         RigidBody,
+        Velocity(Vec2::ZERO),
     ));
 }

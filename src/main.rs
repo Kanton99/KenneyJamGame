@@ -15,9 +15,9 @@ mod player_controller;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_systems(Startup, setup)
         .add_plugins(Physics)
         .add_plugins(PlayerController)
-        .add_systems(Startup, setup)
         .run();
 }
 
