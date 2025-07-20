@@ -1,45 +1,67 @@
 use avian2d::prelude::*;
 use bevy::{
-    app::{App, Plugin, Startup},
+    app::{App, Plugin},
     ecs::{
         component::Component,
         system::{Commands, Res, Single},
     },
     input::{ButtonInput, keyboard::KeyCode},
-    math::{Vec2, Vec3, bounding::Aabb2d},
+    math::Vec2,
     prelude::*,
     sprite::Sprite,
     transform::components::Transform,
 };
+use bevy_ecs_ldtk::prelude::*;
 
 pub struct PlayerController;
 
 impl Plugin for PlayerController {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_player);
-        app.add_systems(FixedUpdate, (set_can_jump, player_controller));
+        app.add_systems(Update, (add_ground_sensor, move_sensor));
+        app.add_systems(Update, player_controller);
+        app.register_ldtk_entity::<PlayerBundle>("Player");
     }
 }
 
 const PLAYER_SPEED: f32 = 100.;
-const PLAYER_JUMP: f32 = 180.;
+const PLAYER_JUMP: f32 = 80.;
 
-#[derive(Component)]
-#[require(Sprite, Transform)]
+#[derive(Component, Default)]
+#[require(
+    RigidBody::Dynamic,
+    Collider::rectangle(18., 18.),
+    LockedAxes::ROTATION_LOCKED,
+    Friction::new(0.2),
+    Restitution::new(0.)
+)]
 pub struct Player {
-    can_jump: bool,
     flipped: bool,
+    with_child: bool,
+}
+
+#[derive(Default, Bundle, LdtkEntity)]
+pub struct PlayerBundle {
+    #[sprite_sheet]
+    sprite_sheet: Sprite,
+    player: Player,
+}
+
+#[derive(Default, Bundle, LdtkEntity)]
+struct GoalBundle {
+    #[sprite_sheet]
+    sprite_sheet: Sprite,
 }
 
 fn player_controller(
     input: Res<ButtonInput<KeyCode>>,
     player_query: Single<(&mut LinearVelocity, &mut Player, &mut Transform)>,
+    sensor_query: Single<&CollidingEntities, With<GroundSensor>>,
 ) {
     let (mut player_velocity, mut player, mut transform) = player_query.into_inner();
+    let sensor = sensor_query.into_inner();
     let mut direction = Vec2::ZERO;
-    if input.pressed(KeyCode::Space) && player.can_jump {
+    if input.pressed(KeyCode::Space) && !sensor.is_empty() {
         direction.y = PLAYER_JUMP;
-        player.can_jump = false;
     }
 
     if input.pressed(KeyCode::KeyA) {
@@ -63,37 +85,42 @@ fn player_controller(
     player_velocity.y += direction.y;
 }
 
-fn set_can_jump(
-    mut events: EventReader<CollisionStarted>,
-    player_query: Single<(Entity, &mut Player)>,
-) {
-    let (entity, mut player) = player_query.into_inner();
+#[derive(Component)]
+pub struct GroundSensor;
 
-    for CollisionStarted(entity1, entity2) in events.read() {
-        if entity1.entity() == entity || entity2.entity() == entity {
-            player.can_jump = true;
-        }
+fn add_ground_sensor(
+    mut commands: Commands,
+    player_query: Single<(Entity, &mut Player, &Transform)>,
+) {
+    let (entity, mut player, transform) = player_query.into_inner();
+    if player.with_child {
+        return;
     }
+
+    let sensor_id = commands
+        .spawn((
+            RigidBody::Kinematic,
+            Collider::rectangle(10., 1.),
+            Sensor,
+            GroundSensor,
+            CollidingEntities::default(),
+            Transform::from_xyz(0., -10., 0.),
+        ))
+        .id();
+
+    // commands.entity(entity).add_child(sensor_id);
+    player.with_child = true;
 }
 
-fn spawn_player(
-    mut command: Commands,
-    asset_server: Res<AssetServer>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+fn move_sensor(
+    player_query: Single<&Transform, (With<Player>, Without<GroundSensor>)>,
+    sensor_query: Single<&mut Transform, (With<GroundSensor>, Without<Player>)>,
 ) {
-    command.spawn((
-        Player {
-            can_jump: false,
-            flipped: false,
-        },
-        RigidBody::Dynamic,
-        Collider::rectangle(18., 18.),
-        // Sprite::from_image(asset_server.load("kenney_tiny_dungeon/Tiles/player.png")),
-        Mesh2d(meshes.add(Rectangle::new(18., 18.))),
-        MeshMaterial2d(materials.add(asset_server.load("kenney_tiny_dungeon/Tiles/player.png"))),
-        Transform::default(),
-        CollisionEventsEnabled,
-        LockedAxes::ROTATION_LOCKED,
-    ));
+    let player = player_query.into_inner();
+    let mut sensor = sensor_query.into_inner();
+
+    let offset: Vec2 = Vec2::new(0., -12.);
+
+    sensor.translation.x = player.translation.x + offset.x;
+    sensor.translation.y = player.translation.y + offset.y;
 }

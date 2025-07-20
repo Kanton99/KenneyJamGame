@@ -1,5 +1,9 @@
 {
-    "activeFile": "",
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "Base.tmx",
     "expandedProjectPaths": [
         "."
     ],
@@ -32,6 +36,22 @@
         "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/First Level.tmx#tileset-tiles": {
             "scaleInDock": 1
         },
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/Test.tmx": {
+            "scale": 1,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": -0.5,
+                "y": 0
+            }
+        },
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/Test2.tmx": {
+            "scale": 1.2297222222222222,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 270.3862660944206,
+                "y": 179.71538287779532
+            }
+        },
         "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/tileset-tiles.tsx": {
             "dynamicWrapping": false,
             "scaleInDock": 1.5,
@@ -50,18 +70,25 @@
             "scaleInEditor": 3
         },
         "Base.tmx": {
-            "scale": 1.5,
+            "scale": 0.75,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -3,
-                "y": 42.66666666666666
+                "x": 47.333333333333314,
+                "y": 21.33333333333337
             }
         }
     },
+    "map.fixedSize": true,
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 18,
+    "map.tileWidth": 18,
     "openFiles": [
+        "Base.tmx",
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/tileset-tiles.tsx"
     ],
     "project": "base_level.tiled-project",
     "recentFiles": [
+        "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/Test.tmx",
         "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/tileset-tiles.tsx",
         "Base.tmx",
         "/home/antonv/Development/Rust/KenneyJamGame/assets/kenney_pixel_platformer/Tiled/First Level.tmx",

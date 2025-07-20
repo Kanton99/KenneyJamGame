@@ -5,23 +5,24 @@ use bevy::{
     app::{App, Startup},
     core_pipeline::core_2d::Camera2d,
     ecs::system::Commands,
-    math::bounding::Aabb2d,
     prelude::*,
 };
-use bevy_ecs_tiled::prelude::*;
+use bevy_ecs_ldtk::prelude::*;
 
 mod player_controller;
 fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins.set(ImagePlugin::default_nearest()),
-            PhysicsPlugins::default(),
+            PhysicsPlugins::default().with_length_unit(9.),
+            PhysicsDebugPlugin::default(),
+            LdtkPlugin,
         ))
         .insert_resource(Gravity(Vec2::NEG_Y * 320.0))
-        .add_plugins(TiledMapPlugin::default())
+        .insert_resource(LevelSelection::index(0))
         .add_systems(Startup, setup)
         .add_plugins(PlayerController)
-        .add_systems(Update, camera_follow)
+        .add_systems(Update, (camera_follow, spawn_wall_colliders))
         .run();
 }
 
@@ -40,28 +41,30 @@ impl Default for ElasticCamera {
     }
 }
 
-fn setup(mut command: Commands, asset_server: Res<AssetServer>) {
-    command.spawn((
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn((
         Camera2d,
-        Transform::from_xyz(0., 0., 0.),
+        Transform::from_xyz(1280. / 4., 720. / 4., 0.),
         Projection::Orthographic(OrthographicProjection {
-            scale: 2. / (4.5),
+            scale: 2. / 4.5,
             ..OrthographicProjection::default_2d()
         }),
         ElasticCamera::default(),
     ));
 
-    command.spawn((
-        Sprite::from_color(Color::srgb(1., 1., 1.), Vec2::ONE),
-        Transform::from_translation(Vec3::new(0., -5., 1.)).with_scale(Vec3::new(200., 1., 1.)),
-        RigidBody::Static,
-        Collider::rectangle(40., 2.),
-    ));
+    // command.spawn((
+    //     Sprite::from_color(Color::srgb(1., 1., 1.), Vec2::ONE),
+    //     Transform::from_translation(Vec3::new(0., -50., 1.)).with_scale(Vec3::new(200., 1., 1.)),
+    //     RigidBody::Static,
+    //     Collider::rectangle(1., 1.),
+    // ));
 
-    command.spawn((
-        TiledMapHandle(asset_server.load("kenney_pixel_platformer/Tiled/First Level.tmx")),
-        TilemapAnchor::Center,
-    ));
+    commands.spawn(LdtkWorldBundle {
+        ldtk_handle: asset_server
+            .load("ldtk_project/the_search_for_more_power.ldtk")
+            .into(),
+        ..Default::default()
+    });
 }
 
 fn camera_follow(
@@ -89,5 +92,16 @@ fn camera_follow(
 
         camera.translation.x = new_pos.x;
         camera.translation.y = new_pos.y;
+    }
+}
+
+fn spawn_wall_colliders(
+    mut commands: Commands,
+    wall_query: Query<(Entity, &Transform), Added<IntGridCell>>,
+) {
+    for (entity, _transform) in wall_query.iter() {
+        commands
+            .entity(entity)
+            .insert((RigidBody::Static, Collider::rectangle(16., 16.)));
     }
 }
