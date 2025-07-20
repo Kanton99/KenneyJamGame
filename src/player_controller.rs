@@ -92,8 +92,12 @@ fn player_controller(
 #[derive(Component)]
 pub struct GroundSensor;
 
-fn add_ground_sensor(mut commands: Commands, player_query: Single<&mut Player>) {
-    let mut player = player_query.into_inner();
+fn add_ground_sensor(
+    mut commands: Commands,
+    player_query: Single<(&mut Player, &mut Transform), Added<Player>>,
+) {
+    let (mut player, mut transform) = player_query.into_inner();
+    transform.translation.z = 10.;
     if player.with_child {
         return;
     }

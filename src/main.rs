@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::player_controller::*;
 use avian2d::prelude::*;
@@ -22,9 +22,14 @@ fn main() {
         ))
         .insert_resource(Gravity(Vec2::NEG_Y * 320.0))
         .insert_resource(LevelSelection::index(0))
+        .register_default_ldtk_int_cell_for_layer::<GroundBundle>("Ground")
+        .register_default_ldtk_int_cell_for_layer::<BackgroundBundle>("Background")
         .add_systems(Startup, setup)
         .add_plugins(PlayerController)
-        .add_systems(Update, (camera_follow, spawn_wall_colliders))
+        .add_systems(
+            Update,
+            (camera_follow, spawn_wall_colliders, reorder_layers),
+        )
         .run();
 }
 
@@ -97,17 +102,34 @@ fn camera_follow(
     }
 }
 
+const TILE_SIZE: f32 = 18.;
+
+#[derive(Default, Component)]
+struct Ground;
+
+#[derive(Default, Bundle, LdtkIntCell)]
+struct GroundBundle {
+    ground: Ground,
+}
+#[derive(Default, Component)]
+struct Background;
+
+#[derive(Default, Bundle, LdtkIntCell)]
+struct BackgroundBundle {
+    background: Background,
+}
+
 fn spawn_wall_colliders(
     mut commands: Commands,
-    wall_query: Query<(Entity, &Transform), Added<IntGridCell>>,
+    wall_query: Query<(Entity, &Transform), Added<Ground>>,
 ) {
     let mut grid: HashMap<(i32, i32), Entity> = HashMap::new();
-    let mut processed = std::collections::HashSet::new();
+    let mut processed = HashSet::new();
 
     // Collect all wall positions
     for (entity, transform) in wall_query.iter() {
-        let grid_x = (transform.translation.x / 16.0).round() as i32;
-        let grid_y = (transform.translation.y / 16.0).round() as i32;
+        let grid_x = (transform.translation.x / TILE_SIZE).round() as i32;
+        let grid_y = (transform.translation.y / TILE_SIZE).round() as i32;
         grid.insert((grid_x, grid_y), entity);
     }
 
@@ -117,8 +139,8 @@ fn spawn_wall_colliders(
             continue;
         }
 
-        let grid_x = (transform.translation.x / 16.0).round() as i32;
-        let grid_y = (transform.translation.y / 16.0).round() as i32;
+        let grid_x = (transform.translation.x / TILE_SIZE).round() as i32;
+        let grid_y = (transform.translation.y / TILE_SIZE).round() as i32;
 
         // Find horizontal span
         let mut width = 1;
@@ -133,7 +155,7 @@ fn spawn_wall_colliders(
         // Create merged collider
         commands.entity(entity).insert((
             RigidBody::Static,
-            Collider::rectangle(16.0 * width as f32, 16.0),
+            Collider::rectangle(TILE_SIZE * width as f32, TILE_SIZE),
             CollisionLayers::new(
                 GameLayer::Ground,
                 [
@@ -145,7 +167,7 @@ fn spawn_wall_colliders(
         ));
 
         // Adjust position to center of merged collider
-        let center_x = transform.translation.x + (width as f32 - 1.0) * 8.0;
+        let center_x = transform.translation.x + (width as f32 - 1.0) * 9.0;
         commands.entity(entity).insert(Transform::from_xyz(
             center_x,
             transform.translation.y,
@@ -153,6 +175,12 @@ fn spawn_wall_colliders(
         ));
 
         processed.insert(entity);
+    }
+}
+
+fn reorder_layers(mut background_layer: Query<&mut Transform, Added<Background>>) {
+    for mut background in background_layer.iter_mut() {
+        background.translation.z = -100.;
     }
 }
 
