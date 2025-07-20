@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::player_controller::*;
 use avian2d::prelude::*;
 use bevy::{
@@ -99,9 +101,66 @@ fn spawn_wall_colliders(
     mut commands: Commands,
     wall_query: Query<(Entity, &Transform), Added<IntGridCell>>,
 ) {
-    for (entity, _transform) in wall_query.iter() {
-        commands
-            .entity(entity)
-            .insert((RigidBody::Static, Collider::rectangle(16., 16.)));
+    let mut grid: HashMap<(i32, i32), Entity> = HashMap::new();
+    let mut processed = std::collections::HashSet::new();
+
+    // Collect all wall positions
+    for (entity, transform) in wall_query.iter() {
+        let grid_x = (transform.translation.x / 16.0).round() as i32;
+        let grid_y = (transform.translation.y / 16.0).round() as i32;
+        grid.insert((grid_x, grid_y), entity);
     }
+
+    // Process each wall tile
+    for (entity, transform) in wall_query.iter() {
+        if processed.contains(&entity) {
+            continue;
+        }
+
+        let grid_x = (transform.translation.x / 16.0).round() as i32;
+        let grid_y = (transform.translation.y / 16.0).round() as i32;
+
+        // Find horizontal span
+        let mut width = 1;
+        while grid.contains_key(&(grid_x + width, grid_y)) {
+            if let Some(&next_entity) = grid.get(&(grid_x + width, grid_y)) {
+                processed.insert(next_entity);
+                // commands.entity(next_entity).despawn();
+            }
+            width += 1;
+        }
+
+        // Create merged collider
+        commands.entity(entity).insert((
+            RigidBody::Static,
+            Collider::rectangle(16.0 * width as f32, 16.0),
+            CollisionLayers::new(
+                GameLayer::Ground,
+                [
+                    GameLayer::Default,
+                    GameLayer::Player,
+                    GameLayer::GroundSensor,
+                ],
+            ),
+        ));
+
+        // Adjust position to center of merged collider
+        let center_x = transform.translation.x + (width as f32 - 1.0) * 8.0;
+        commands.entity(entity).insert(Transform::from_xyz(
+            center_x,
+            transform.translation.y,
+            transform.translation.z,
+        ));
+
+        processed.insert(entity);
+    }
+}
+
+#[derive(PhysicsLayer, Default)]
+pub enum GameLayer {
+    #[default]
+    Default,
+    Player,
+    Ground,
+    GroundSensor,
 }

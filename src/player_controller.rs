@@ -13,12 +13,14 @@ use bevy::{
 };
 use bevy_ecs_ldtk::prelude::*;
 
+use crate::GameLayer;
+
 pub struct PlayerController;
 
 impl Plugin for PlayerController {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (add_ground_sensor, move_sensor));
-        app.add_systems(Update, player_controller);
+        app.add_systems(Update, add_ground_sensor);
+        app.add_systems(Update, (player_controller, move_sensor).chain());
         app.register_ldtk_entity::<PlayerBundle>("Player");
     }
 }
@@ -32,11 +34,13 @@ const PLAYER_JUMP: f32 = 80.;
     Collider::rectangle(18., 18.),
     LockedAxes::ROTATION_LOCKED,
     Friction::new(0.2),
-    Restitution::new(0.)
+    Restitution::new(0.),
+    CollisionLayers::new(GameLayer::Player, [GameLayer::Default, GameLayer::Ground])
 )]
 pub struct Player {
     flipped: bool,
     with_child: bool,
+    jumped: bool,
 }
 
 #[derive(Default, Bundle, LdtkEntity)]
@@ -88,35 +92,31 @@ fn player_controller(
 #[derive(Component)]
 pub struct GroundSensor;
 
-fn add_ground_sensor(
-    mut commands: Commands,
-    player_query: Single<(Entity, &mut Player, &Transform)>,
-) {
-    let (entity, mut player, transform) = player_query.into_inner();
+fn add_ground_sensor(mut commands: Commands, player_query: Single<&mut Player>) {
+    let mut player = player_query.into_inner();
     if player.with_child {
         return;
     }
 
-    let sensor_id = commands
-        .spawn((
-            RigidBody::Kinematic,
-            Collider::rectangle(10., 1.),
-            Sensor,
-            GroundSensor,
-            CollidingEntities::default(),
-            Transform::from_xyz(0., -10., 0.),
-        ))
-        .id();
+    commands.spawn((
+        RigidBody::Kinematic,
+        Collider::rectangle(10., 1.),
+        Sensor,
+        GroundSensor,
+        CollidingEntities::default(),
+        Transform::from_xyz(0., -10., 0.),
+        CollisionLayers::new(GameLayer::GroundSensor, [GameLayer::Ground]),
+    ));
 
     // commands.entity(entity).add_child(sensor_id);
     player.with_child = true;
 }
 
 fn move_sensor(
-    player_query: Single<&Transform, (With<Player>, Without<GroundSensor>)>,
+    player_query: Single<(&Transform, &LinearVelocity), (With<Player>, Without<GroundSensor>)>,
     sensor_query: Single<&mut Transform, (With<GroundSensor>, Without<Player>)>,
 ) {
-    let player = player_query.into_inner();
+    let (player, velocity) = player_query.into_inner();
     let mut sensor = sensor_query.into_inner();
 
     let offset: Vec2 = Vec2::new(0., -12.);
