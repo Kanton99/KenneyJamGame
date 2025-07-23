@@ -9,7 +9,7 @@ use bevy::{
     ecs::system::Commands,
     prelude::*,
 };
-use bevy_ecs_ldtk::prelude::*;
+use bevy_ecs_ldtk::{assets::LevelMetadata, ldtk::loaded_level::LoadedLevel, prelude::*};
 
 mod player_controller;
 fn main() {
@@ -20,16 +20,18 @@ fn main() {
             PhysicsDebugPlugin::default(),
             LdtkPlugin,
         ))
-        .insert_resource(Gravity(Vec2::NEG_Y * 320.0))
+        .insert_resource(Gravity(Vec2::NEG_Y * 640.0))
         .insert_resource(LevelSelection::index(0))
         .register_default_ldtk_int_cell_for_layer::<GroundBundle>("Ground")
         .register_default_ldtk_int_cell_for_layer::<BackgroundBundle>("Background")
+        .register_default_ldtk_entity_for_layer::<TrapBundle>("Trap")
         .add_systems(Startup, setup)
         .add_plugins(PlayerController)
         .add_systems(
             Update,
-            (camera_follow, spawn_wall_colliders, reorder_layers),
+            (camera_follow, spawn_wall_colliders, setup_traps, fix_ent_z),
         )
+        .add_systems(FixedUpdate, trap_system)
         .run();
 }
 
@@ -59,13 +61,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         ElasticCamera::default(),
     ));
 
-    // command.spawn((
-    //     Sprite::from_color(Color::srgb(1., 1., 1.), Vec2::ONE),
-    //     Transform::from_translation(Vec3::new(0., -50., 1.)).with_scale(Vec3::new(200., 1., 1.)),
-    //     RigidBody::Static,
-    //     Collider::rectangle(1., 1.),
-    // ));
-
     commands.spawn(LdtkWorldBundle {
         ldtk_handle: asset_server
             .load("ldtk_project/the_search_for_more_power.ldtk")
@@ -81,11 +76,11 @@ fn camera_follow(
 ) {
     let player = player_query.into_inner();
     let (mut camera, elastic_params) = camera_query.into_inner();
-
     let player_pos = player.translation.truncate();
-    let camera_pos = camera.translation.truncate();
+    let mut camera_pos = camera.translation.truncate();
 
     let distance = player_pos.distance(camera_pos);
+
     // Only move camera if player is beyond lag distance
     if distance > elastic_params.lag_distance {
         let direction = (player_pos - camera_pos).normalize();
@@ -96,10 +91,11 @@ fn camera_follow(
             target_pos,
             elastic_params.catch_up_speed * time.delta_secs(),
         );
-
-        camera.translation.x = new_pos.x;
-        camera.translation.y = new_pos.y;
+        camera_pos = new_pos;
     }
+
+    camera.translation.x = camera_pos.x;
+    camera.translation.y = camera_pos.y;
 }
 
 const TILE_SIZE: f32 = 18.;
@@ -178,9 +174,46 @@ fn spawn_wall_colliders(
     }
 }
 
-fn reorder_layers(mut background_layer: Query<&mut Transform, Added<Background>>) {
-    for mut background in background_layer.iter_mut() {
-        background.translation.z = -100.;
+#[derive(Default, Component)]
+#[require(Sprite)]
+pub struct Trap;
+
+#[derive(Default, Bundle, LdtkEntity)]
+struct TrapBundle {
+    trap: Trap,
+}
+
+fn setup_traps(mut commands: Commands, traps_query: Query<(Entity, &Transform), Added<Trap>>) {
+    for (ent, transform) in traps_query.iter() {
+        let mut translation = transform.translation;
+        translation.z = 10.;
+        translation.y += 15.;
+        commands.entity(ent).insert((
+            Trap,
+            Collider::rectangle(TILE_SIZE, TILE_SIZE),
+            Sensor,
+            RigidBody::Static,
+            Transform::from_translation(translation),
+            LockedAxes::ROTATION_LOCKED,
+        ));
+    }
+}
+
+fn trap_system(
+    mut collision: EventReader<CollisionStarted>,
+    traps_query: Query<&Trap>,
+    mut player_query: Query<&mut Transform, With<Player>>,
+    spawn_point: Res<SpawnPoint>,
+) {
+    for CollisionStarted(ent1, ent2) in collision.read() {
+        if player_query.contains(*ent1) && traps_query.contains(*ent2)
+            || player_query.contains(*ent2) && traps_query.contains(*ent1)
+        {
+            for mut transform in player_query.iter_mut() {
+                transform.translation.x = spawn_point.pos.x;
+                transform.translation.y = spawn_point.pos.y;
+            }
+        }
     }
 }
 
@@ -191,4 +224,10 @@ pub enum GameLayer {
     Player,
     Ground,
     GroundSensor,
+}
+
+fn fix_ent_z(mut query: Query<&mut Transform, Added<EntityInstance>>) {
+    for mut transform in query.iter_mut() {
+        transform.translation.z = 10.;
+    }
 }

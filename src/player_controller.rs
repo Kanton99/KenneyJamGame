@@ -20,8 +20,9 @@ pub struct PlayerController;
 impl Plugin for PlayerController {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, add_ground_sensor);
-        app.add_systems(Update, (player_controller, move_sensor).chain());
+        app.add_systems(Update, (player_controller, move_sensor, win).chain());
         app.register_ldtk_entity::<PlayerBundle>("Player");
+        app.insert_resource(SpawnPoint { pos: Vec2::ZERO });
     }
 }
 
@@ -35,7 +36,8 @@ const PLAYER_JUMP: f32 = 80.;
     LockedAxes::ROTATION_LOCKED,
     Friction::new(0.2),
     Restitution::new(0.),
-    CollisionLayers::new(GameLayer::Player, [GameLayer::Default, GameLayer::Ground])
+    CollisionLayers::new(GameLayer::Player, [GameLayer::Default, GameLayer::Ground]),
+    CollisionEventsEnabled
 )]
 pub struct Player {
     flipped: bool,
@@ -92,12 +94,20 @@ fn player_controller(
 #[derive(Component)]
 pub struct GroundSensor;
 
+#[derive(Resource)]
+pub struct SpawnPoint {
+    pub pos: Vec2,
+}
+
 fn add_ground_sensor(
     mut commands: Commands,
     player_query: Single<(&mut Player, &mut Transform), Added<Player>>,
+    mut spawn_point: ResMut<SpawnPoint>,
 ) {
     let (mut player, mut transform) = player_query.into_inner();
     transform.translation.z = 10.;
+    spawn_point.pos = transform.translation.truncate();
+
     if player.with_child {
         return;
     }
@@ -114,6 +124,18 @@ fn add_ground_sensor(
 
     // commands.entity(entity).add_child(sensor_id);
     player.with_child = true;
+}
+
+fn win(mut commands: Commands, player_query: Single<&Transform, With<Player>>) {
+    let player = player_query.into_inner();
+    if player.translation.x >= 913. {
+        let mut translation = player.translation;
+        translation.y += 50.;
+        commands.spawn((
+            Text::new("You found More Power"),
+            Transform::from_translation(translation),
+        ));
+    }
 }
 
 fn move_sensor(
