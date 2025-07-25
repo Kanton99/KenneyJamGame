@@ -8,6 +8,3 @@ avian2d = "0.3.1"
 bevy = { version = "0.16.1", features = ["dynamic_linking", "wayland"] }
 bevy_ecs_ldtk = { version = "0.12.0", features = ["atlas"] }
 bevy_ecs_tilemap = "0.16.0"
-
-[target.wasm32-unknown-unknown]
-runner = "wasm-server-runner"

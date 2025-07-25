@@ -1,4 +1,6 @@
 use avian2d::prelude::*;
+use avian2d::spatial_query::SpatialQuery;
+use avian2d::spatial_query::SpatialQueryFilter;
 use bevy::{
     app::{App, Plugin},
     ecs::{
@@ -19,15 +21,15 @@ pub struct PlayerController;
 
 impl Plugin for PlayerController {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, add_ground_sensor);
-        app.add_systems(Update, (player_controller, move_sensor, win).chain());
+        app.add_systems(Update, update_spawn_point);
+        app.add_systems(Update, (ground_check, player_controller, win).chain());
         app.register_ldtk_entity::<PlayerBundle>("Player");
         app.insert_resource(SpawnPoint { pos: Vec2::ZERO });
     }
 }
 
 const PLAYER_SPEED: f32 = 100.;
-const PLAYER_JUMP: f32 = 80.;
+const PLAYER_JUMP: f32 = 320.;
 
 #[derive(Component, Default)]
 #[require(
@@ -41,7 +43,6 @@ const PLAYER_JUMP: f32 = 80.;
 )]
 pub struct Player {
     flipped: bool,
-    with_child: bool,
     jumped: bool,
 }
 
@@ -61,13 +62,12 @@ struct GoalBundle {
 fn player_controller(
     input: Res<ButtonInput<KeyCode>>,
     player_query: Single<(&mut LinearVelocity, &mut Player, &mut Transform)>,
-    sensor_query: Single<&CollidingEntities, With<GroundSensor>>,
 ) {
     let (mut player_velocity, mut player, mut transform) = player_query.into_inner();
-    let sensor = sensor_query.into_inner();
     let mut direction = Vec2::ZERO;
-    if input.pressed(KeyCode::Space) && !sensor.is_empty() {
+    if !player.jumped && input.pressed(KeyCode::Space) {
         direction.y = PLAYER_JUMP;
+        player.jumped = true;
     }
 
     if input.pressed(KeyCode::KeyA) {
@@ -99,31 +99,13 @@ pub struct SpawnPoint {
     pub pos: Vec2,
 }
 
-fn add_ground_sensor(
-    mut commands: Commands,
-    player_query: Single<(&mut Player, &mut Transform), Added<Player>>,
+fn update_spawn_point(
+    player_query: Single<&mut Transform, Added<Player>>,
     mut spawn_point: ResMut<SpawnPoint>,
 ) {
-    let (mut player, mut transform) = player_query.into_inner();
+    let mut transform = player_query.into_inner();
     transform.translation.z = 10.;
     spawn_point.pos = transform.translation.truncate();
-
-    if player.with_child {
-        return;
-    }
-
-    commands.spawn((
-        RigidBody::Kinematic,
-        Collider::rectangle(10., 1.),
-        Sensor,
-        GroundSensor,
-        CollidingEntities::default(),
-        Transform::from_xyz(0., -10., 0.),
-        CollisionLayers::new(GameLayer::GroundSensor, [GameLayer::Ground]),
-    ));
-
-    // commands.entity(entity).add_child(sensor_id);
-    player.with_child = true;
 }
 
 fn win(mut commands: Commands, player_query: Single<&Transform, With<Player>>) {
@@ -138,15 +120,14 @@ fn win(mut commands: Commands, player_query: Single<&Transform, With<Player>>) {
     }
 }
 
-fn move_sensor(
-    player_query: Single<(&Transform, &LinearVelocity), (With<Player>, Without<GroundSensor>)>,
-    sensor_query: Single<&mut Transform, (With<GroundSensor>, Without<Player>)>,
-) {
-    let (player, velocity) = player_query.into_inner();
-    let mut sensor = sensor_query.into_inner();
+fn ground_check(player_pos: Single<(&mut Player, &Transform)>, spatial_query: SpatialQuery) {
+    let (mut player, transform) = player_pos.into_inner();
 
-    let offset: Vec2 = Vec2::new(0., -12.);
+    let origin = transform.translation.truncate();
+    let direction = Dir2::NEG_Y;
+    let filter = SpatialQueryFilter::from_mask([GameLayer::Ground]);
 
-    sensor.translation.x = player.translation.x + offset.x;
-    sensor.translation.y = player.translation.y + offset.y;
+    if let Some(_hit) = spatial_query.cast_ray(origin, direction, 9.1, true, &filter) {
+        player.jumped = false;
+    }
 }
